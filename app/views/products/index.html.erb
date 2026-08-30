@@ -1,10 +1,11 @@
 <% content_for :title, "Catálogo" %>
 
-<h1>Catálogo</h1>
+<h1>Catálogo de productos</h1>
 
 <% if @suppliers.empty? %>
   <p>Todavía no hay proveedores cargados.</p>
 <% else %>
+  <p>Aquí podrás encontrar múltiples proveedores para comprar los productos que tu quieras. Agregalos a tu carrito y luego confirma la orden.</p>
   <% @suppliers.each do |supplier| %>
     <section class="supplier-group">
       <h2><%= supplier.name %></h2>
@@ -32,7 +33,9 @@
                   <%= form_with url: cart_items_path, method: :post do |f| %>
                     <%= f.hidden_field :product_id, value: product.id %>
                     <%= f.number_field :quantity, value: 1, step: "any", size: 3 %>
-                    <%= f.submit "Agregar al carrito" %>
+                    <%= f.button type: "submit", title: "Agregar al carrito", aria: { label: "Agregar al carrito" } do %>
+                      <span class="material-icons" aria-hidden="true">add_shopping_cart</span>
+                    <% end %>
                   <% end %>
                 </td>
               </tr>

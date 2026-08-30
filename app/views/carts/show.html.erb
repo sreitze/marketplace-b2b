@@ -25,12 +25,16 @@
           <td>
             <%= form_with url: cart_item_path(item), method: :patch do |f| %>
               <%= f.number_field :quantity, value: item.quantity, step: "any", size: 3 %>
-              <%= f.submit "Actualizar" %>
+              <%= f.button type: "submit", title: "Actualizar", aria: { label: "Actualizar" } do %>
+                <span class="material-icons" aria-hidden="true">autorenew</span>
+              <% end %>
             <% end %>
           </td>
           <td><%= format_money(item.subtotal_cents) %></td>
           <td>
-            <%= button_to "Quitar", cart_item_path(item), method: :delete %>
+            <%= button_to cart_item_path(item), method: :delete, title: "Quitar", aria: { label: "Quitar" } do %>
+              <span class="material-icons" aria-hidden="true">delete</span>
+            <% end %>
           </td>
         </tr>
       <% end %>
@@ -39,7 +43,10 @@
 
   <p><strong>Total: <%= format_money(@cart_items.sum(&:subtotal_cents)) %></strong></p>
 
-  <p><%= button_to "Confirmar", orders_path, method: :post %></p>
+  <p>
+    <%= button_to "Confirmar orden", orders_path, method: :post, onclick: "return confirm('¿Confirmar la compra?')" %>
+    <%= button_to "Vaciar carrito", cart_path, method: :delete, onclick: "return confirm('¿Vaciar el carrito?')" %>
+  </p>
 <% end %>
 
 <p><%= link_to "Volver al catálogo", root_path %></p>
