@@ -4,7 +4,7 @@ class CartItemsController < ApplicationController
     item = current_cart.add_product(product, params[:quantity].presence || 1)
 
     if item.errors.empty?
-      redirect_to cart_path, notice: "#{product.name} agregado al carrito."
+      redirect_to root_path, notice: "#{product.name} agregado al carrito."
     else
       redirect_to root_path, alert: item.errors.full_messages.to_sentence
     end

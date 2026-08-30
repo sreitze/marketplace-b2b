@@ -1,10 +1,10 @@
 require "test_helper"
 
 class CartItemsControllerTest < ActionDispatch::IntegrationTest
-  test "agrega un producto al carrito y redirige al carrito" do
+  test "agrega un producto al carrito y redirige al catalogo" do
     post cart_items_path, params: { product_id: products(:mouse).id, quantity: 2 }
 
-    assert_redirected_to cart_path
+    assert_redirected_to root_path
     cart = Cart.find(session[:cart_id])
     assert_equal 2, cart.cart_items.find_by(product: products(:mouse)).quantity
   end
