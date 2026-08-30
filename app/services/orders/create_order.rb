@@ -11,18 +11,24 @@ module Orders
 
       order = nil
       ActiveRecord::Base.transaction do
-        order = cart.store.orders.create!
+        order = cart.store.orders.create!(total_cents: 0)
 
+        order_total_cents = 0
         cart_items_by_supplier.each do |supplier, items|
-          sub_order = order.sub_orders.create!(supplier: supplier)
+          sub_order = order.sub_orders.create!(supplier: supplier, subtotal_cents: 0)
+          subtotal_cents = 0
           items.each do |cart_item|
-            sub_order.order_items.create!(
+            order_item = sub_order.order_items.create!(
               product: cart_item.product,
               quantity: cart_item.quantity,
               unit_price_cents: cart_item.product.price_cents
             )
+            subtotal_cents += order_item.subtotal_cents
           end
+          sub_order.update!(subtotal_cents: subtotal_cents)
+          order_total_cents += subtotal_cents
         end
+        order.update!(total_cents: order_total_cents)
 
         # delete_all: DELETE directo por SQL, sin correr los callbacks de
         # CartItem. destroy_all dispararía release_stock y devolvería al

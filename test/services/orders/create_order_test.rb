@@ -20,6 +20,20 @@ class Orders::CreateOrderTest < ActiveSupport::TestCase
     assert_equal 90_000, globex_sub_order.order_items.first.unit_price_cents
   end
 
+  test "persiste el total de la orden y el subtotal de cada suborden" do
+    cart = carts(:carrito_tienda)
+    cart.cart_items.create!(product: products(:monitor), quantity: 1)
+
+    order = Orders::CreateOrder.call(cart: cart)
+
+    acme_sub_order = order.sub_orders.find_by(supplier: suppliers(:acme))
+    globex_sub_order = order.sub_orders.find_by(supplier: suppliers(:globex))
+
+    assert_equal 30_000, acme_sub_order.subtotal_cents
+    assert_equal 90_000, globex_sub_order.subtotal_cents
+    assert_equal 120_000, order.total_cents
+  end
+
   test "congela el precio del producto al momento de la compra" do
     order = Orders::CreateOrder.call(cart: carts(:carrito_tienda))
     order_item = order.order_items.first
