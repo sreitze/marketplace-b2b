@@ -87,8 +87,9 @@ erDiagram
     }
 ```
 
-`SubOrder` expone su subtotal y `Order` su total general. Ambos se derivan de los items, que ya
-tienen el precio congelado.
+`SubOrder` expone su subtotal (`subtotal_cents`) y `Order` su total general (`total_cents`). Ambos
+quedan persistidos como columnas al confirmar la compra, calculados una sola vez a partir de los
+items (que ya tienen el precio congelado); no se recalculan en lecturas posteriores.
 
 ## Decisiones y trade-offs
 
@@ -108,13 +109,21 @@ nullable en los items, y un filtro por estado en toda consulta de órdenes.
 `OrderItem#unit_price_cents` es una columna congelada. Es la asimetría central del dominio y está
 comentada en ambos modelos.
 
-### Dinero en enteros y totales calculados, no denormalizados
+### Dinero en enteros y totales persistidos, no recalculados
 
 Todos los importes son `*_cents` enteros. Nunca floats.
 
-Los subtotales se derivan de los items en vez de guardarse en columnas. La suma se hace en Ruby y no
-en SQL, para que un eventual N+1 se resuelva con `includes` desde el controller en lugar de pegarle
-a la base una vez por suborden.
+`orders.total_cents` y `sub_orders.subtotal_cents` son columnas, no métodos calculados. La decisión
+original era lo contrario (derivar la suma de los items en Ruby en cada lectura, para resolver un
+eventual N+1 con `includes` en vez de pegarle a la base por suborden). Se revirtió porque acceder al
+total de una orden histórica sin recorrer sus items importa más que ese N+1 hipotético — en la
+práctica leer el total pasa a ser un `SELECT` directo.
+
+`Orders::CreateOrder` calcula ambos valores una sola vez, dentro de la misma transacción del
+checkout, a partir de `OrderItem#unit_price_cents` ya congelado (nunca de `product.price_cents`).
+Como una orden nunca se edita después de confirmada, el valor persistido no puede quedar
+desactualizado respecto a sus items. `OrderItem` no tiene un subtotal propio en columna: es un solo
+producto, no una suma, no hay nada que denormalizar ahí.
 
 ### Las reglas críticas viven también en la base
 
@@ -127,6 +136,8 @@ garantizan que la regla no se pueda violar ni con un bug que saltee el modelo.
 | Único `(order_id, supplier_id)` en `sub_orders` | Exactamente una suborden por proveedor |
 | Único `(cart_id, product_id)` en `cart_items` | Agregar dos veces el mismo producto suma cantidades |
 | `unit_price_cents NOT NULL` en `order_items` | Una orden histórica nunca queda sin su precio de referencia |
+| `CHECK (total_cents >= 0)` en `orders` | El total persistido nunca queda negativo |
+| `CHECK (subtotal_cents >= 0)` en `sub_orders` | El subtotal persistido nunca queda negativo |
 
 ### Sin autenticación, con un punto de extensión explícito
 

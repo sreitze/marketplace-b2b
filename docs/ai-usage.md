@@ -242,3 +242,34 @@ punto de la regla de negocio fácil de romper sin darse cuenta:
 `orders_controller_test.rb` para una orden inexistente, cubriendo el scoping por `current_store`.
 
 **Se corrió `bin/rails test` (73/73 verdes) y `bin/rubocop` antes de cada commit.**
+
+### Persistir `total_cents`/`subtotal_cents` en vez de calcularlos
+
+**Se pidió:** guardar en base el total de la `Order` y el subtotal de cada `SubOrder`, ante la duda
+de si las órdenes históricas perdían esa información.
+
+**Se aclaró antes de tocar código:** no la perdían — `Order#total_cents`/`SubOrder#subtotal_cents`
+ya sumaban `OrderItem#unit_price_cents`, que queda congelado. El dato correcto siempre estuvo
+disponible, solo que no vivía en una columna. El cambio revierte una decisión ya documentada en el
+README ("totales calculados, no denormalizados"), así que se reescribió esa sección explicando el
+motivo del cambio en vez de dejar el README contradiciendo el código.
+
+**Se aceptó:** columnas `orders.total_cents` y `sub_orders.subtotal_cents` (mismo nombre que los
+métodos que reemplazan, para no tocar vistas ni tests existentes), `NOT NULL` + `CHECK (>= 0)` igual
+que el resto de columnas de dinero, y el cálculo movido a `Orders::CreateOrder`.
+
+**Se corrigió sin haberlo consultado antes:** la primera versión del service calculaba el total
+leyendo `cart_item.subtotal_cents` (precio en vivo del producto) antes de crear los `order_items`.
+Rompía el test que fuerza `Product#price_cents` a devolver `nil` a mitad de checkout: la resta
+`quantity * nil` explota con `TypeError` en vez del `ActiveRecord::RecordInvalid` esperado al
+validar `unit_price_cents`. Se movió el cálculo a después de crear cada `order_item`, leyendo
+`order_item.subtotal_cents` (precio ya congelado) y actualizando `SubOrder`/`Order` con `update!`
+al final de cada grupo — más alineado además con la regla de nunca calcular totales desde
+`product.price_cents`.
+
+**Se verificó en vez de darlo por bueno:** la migración escribe con backfill explícito
+(`add_column` nullable → recorrer filas existentes → `change_column_null` → `add_check_constraint`)
+en vez de agregar la columna `NOT NULL` directo, para no asumir que las tablas están vacías en
+cualquier entorno donde se corra. Se corrió `bin/rails db:migrate` contra la base de dev (vacía, sin
+filas que backfillear) y `bin/rails test` (74/74 verdes) y `bin/rubocop` (7 archivos tocados, sin
+observaciones) antes de dar el cambio por bueno.
