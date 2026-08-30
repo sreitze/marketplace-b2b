@@ -1,8 +1,11 @@
+# Los fixtures insertan directo en la base, sin pasar por los callbacks de
+# CartItem que reservan stock. El stock de teclado ya descuenta las 2
+# unidades reservadas por el fixture teclado_en_carrito (10 - 2 = 8).
 teclado:
   supplier: acme
   name: Teclado mecánico
   price_cents: 15000
-  stock: 10
+  stock: 8
 
 mouse:
   supplier: acme

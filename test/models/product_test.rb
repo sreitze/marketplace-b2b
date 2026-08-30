@@ -41,4 +41,12 @@ class ProductTest < ActiveSupport::TestCase
     assert_equal suppliers(:acme), products(:teclado).supplier
     assert_equal suppliers(:globex), products(:monitor).supplier
   end
+
+  test "actualizar el stock directamente sigue funcionando sin pasar por el carrito" do
+    product = products(:mouse)
+
+    product.update!(stock: 20)
+
+    assert_equal 20, product.reload.stock
+  end
 end

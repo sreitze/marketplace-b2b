@@ -50,17 +50,18 @@ class CartItemTest < ActiveSupport::TestCase
     assert otro.valid?
   end
 
-  test "rechaza una cantidad superior al stock del producto" do
+  test "rechaza una cantidad superior al stock disponible" do
     item = cart_items(:teclado_en_carrito)
-    item.quantity = item.product.stock + 1
+    cap = item.product.stock + item.quantity
+    item.quantity = cap + 1
 
     assert_not item.valid?
     assert_includes item.errors.attribute_names, :quantity
   end
 
-  test "permite una cantidad igual al stock del producto" do
+  test "permite una cantidad igual al stock disponible, incluyendo lo que este item ya reservó" do
     item = cart_items(:teclado_en_carrito)
-    item.quantity = item.product.stock
+    item.quantity = item.product.stock + item.quantity
 
     assert item.valid?
   end
@@ -72,5 +73,52 @@ class CartItemTest < ActiveSupport::TestCase
     item.product.update!(price_cents: 20_000)
 
     assert_equal 40_000, item.reload.subtotal_cents
+  end
+
+  test "crear un cart item descuenta el stock reservado del producto" do
+    item = CartItem.create!(cart: carts(:carrito_vacio), product: products(:mouse), quantity: 3)
+
+    assert item.persisted?
+    assert_equal 2, products(:mouse).reload.stock
+  end
+
+  test "aumentar la cantidad descuenta solo la diferencia del stock" do
+    item = cart_items(:teclado_en_carrito)
+
+    item.update!(quantity: 5)
+
+    assert_equal 5, item.product.reload.stock
+  end
+
+  test "reducir la cantidad devuelve la diferencia al stock" do
+    item = cart_items(:teclado_en_carrito)
+
+    item.update!(quantity: 1)
+
+    assert_equal 9, item.product.reload.stock
+  end
+
+  test "destruir un cart item devuelve toda su cantidad al stock" do
+    item = cart_items(:teclado_en_carrito)
+
+    item.destroy!
+
+    assert_equal 10, products(:teclado).reload.stock
+  end
+
+  test "guardar sin cambiar la cantidad no mueve el stock" do
+    item = cart_items(:teclado_en_carrito)
+
+    item.save!
+
+    assert_equal 8, item.product.reload.stock
+  end
+
+  test "una cantidad que excede el stock disponible no se guarda ni descuenta stock" do
+    item = cart_items(:teclado_en_carrito)
+    item.quantity = item.product.stock + item.quantity + 1
+
+    assert_not item.save
+    assert_equal 8, item.product.reload.stock
   end
 end
