@@ -136,3 +136,20 @@ lea natural en vez de mostrar el nombre de columna en inglés.
 **Se verificó en vez de darlo por bueno:** se instanció cada modelo inválido por `rails runner`
 (incluyendo precio/stock negativo y cantidad decimal) para confirmar que ya no aparece
 "Translation missing" en ningún caso, y se corrió `bin/rails test` (45/45 verdes, sin tocar tests).
+
+### Validación nativa del navegador bloqueaba el mensaje en español
+
+**Se pidió:** corregir que al ingresar una cantidad decimal en el carrito aparezca un mensaje del
+navegador en inglés ("Please enter a valid value...") en vez del mensaje en español.
+
+**Se encontró y se corrigió:** el `<html>` no tenía `lang`, y los `number_field` de cantidad usaban
+`step: 1` (o el default implícito de `<input type="number">`, que también es `1`). El navegador
+bloqueaba el submit antes de llegar a Rails, así que la validación en español del modelo nunca se
+ejecutaba. Se agregó `lang="es"` al layout y se cambió `step: 1`/`min: 1` por `step: "any"` en
+`products/index.html.erb` y `carts/show.html.erb`, delegando la validación de cantidad al modelo
+(que ya la tenía cubierta y en español) en vez de duplicarla en el navegador.
+
+**Se verificó en vez de darlo por bueno:** con un script de Playwright contra el servidor real
+(`bin/rails server`), llenando el campo cantidad con `1.5` y enviando el formulario, se confirmó que
+ya no aparece el tooltip nativo y que la página muestra el flash "Cantidad debe ser un número
+entero". Se corrió `bin/rails test` (45/45 verdes) antes de dar el cambio por bueno.

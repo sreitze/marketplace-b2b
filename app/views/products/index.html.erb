@@ -31,7 +31,7 @@
                 <td>
                   <%= form_with url: cart_items_path, method: :post do |f| %>
                     <%= f.hidden_field :product_id, value: product.id %>
-                    <%= f.number_field :quantity, value: 1, min: 1, step: 1, size: 3 %>
+                    <%= f.number_field :quantity, value: 1, step: "any", size: 3 %>
                     <%= f.submit "Agregar al carrito" %>
                   <% end %>
                 </td>

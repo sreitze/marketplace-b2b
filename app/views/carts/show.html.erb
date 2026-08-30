@@ -24,7 +24,7 @@
           <td><%= format_money(item.unit_price_cents) %></td>
           <td>
             <%= form_with url: cart_item_path(item), method: :patch do |f| %>
-              <%= f.number_field :quantity, value: item.quantity, min: 1, step: 1, size: 3 %>
+              <%= f.number_field :quantity, value: item.quantity, step: "any", size: 3 %>
               <%= f.submit "Actualizar" %>
             <% end %>
           </td>
