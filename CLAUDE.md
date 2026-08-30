@@ -122,3 +122,6 @@ precios y stock distintos. `db:seed` tiene que ser idempotente.
   cambió y por qué.
 - Si generás algo que no es trivialmente verificable (una query, una transacción, una validación con
   casos raros), decilo explícitamente para revisarlo en vez de darlo por bueno.
+- **No verificar cambios levantando el servidor ni usando un navegador** (real o headless,
+  Playwright/chromium-cli/etc.). Confiar en `bin/rails test` y, si hace falta probar algo puntual
+  fuera de un test, `bin/rails runner`. Las pruebas manuales en navegador las hace el usuario.
