@@ -1,0 +1,32 @@
+<% content_for :title, "Orden ##{@order.id}" %>
+
+<h1>Orden #<%= @order.id %> confirmada</h1>
+
+<% @order.sub_orders.each do |sub_orden| %>
+  <h2><%= sub_orden.supplier.name %></h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Producto</th>
+        <th>Precio unitario</th>
+        <th>Cantidad</th>
+        <th>Subtotal</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% sub_orden.order_items.each do |item| %>
+        <tr>
+          <td><%= item.product.name %></td>
+          <td><%= format_money(item.unit_price_cents) %></td>
+          <td><%= item.quantity %></td>
+          <td><%= format_money(item.subtotal_cents) %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+  <p>Subtotal <%= sub_orden.supplier.name %>: <strong><%= format_money(sub_orden.subtotal_cents) %></strong></p>
+<% end %>
+
+<p><strong>Total: <%= format_money(@order.total_cents) %></strong></p>
+
+<p><%= link_to "Volver al catálogo", root_path %></p>
