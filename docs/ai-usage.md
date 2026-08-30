@@ -77,3 +77,23 @@ validaciones y totales.
 
 **Decisión que quedó abierta:** `price_cents` admite cero, porque ninguna regla prohíbe un producto
 gratis. Se constriñó sólo el precio negativo, que es claramente un bug.
+
+### Seeds y catálogo
+
+**Se pidió:** continuar con los seeds y el catálogo.
+
+**Se aceptó:** seeds idempotentes (`find_or_create_by!`/`find_or_initialize_by` + `update!`) con 1
+tienda, 2 proveedores y 3 productos por proveedor con precios y stock distintos. Catálogo de solo
+lectura en `/`, agrupado por proveedor, usando `includes(:products)` para evitar N+1.
+
+**Se agregó sin haberlo consultado antes:**
+
+- `format_money` en `ApplicationHelper`, formateando con `divmod` entero en vez de dividir por
+  100.0. Es la forma de mantener la regla "dinero en enteros, nunca floats" también en la capa de
+  presentación, no sólo en el modelo.
+- Tests del controller (proveedor con productos, y proveedor sin productos para no romper con
+  colecciones vacías) y del helper de formateo, en el mismo commit que el código.
+
+**Se verificó en vez de darlo por bueno:** que `db:seed` corrido dos veces seguidas no duplica
+filas (mismo `Store.count`, `Supplier.count` y `Product.count` antes y después), y que la página
+renderiza sin errores contra la base real (`bin/rails server` + `curl`).

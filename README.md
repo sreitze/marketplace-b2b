@@ -6,17 +6,19 @@ Una tienda arma un carrito con productos de varios proveedores. Al confirmar la 
 orden con **una suborden por proveedor**, y cada item queda con el precio congelado al momento de la
 compra.
 
-## Estado actual: el modelo de datos está completo, falta la interfaz
+## Estado actual: catálogo listo, falta carrito y checkout
 
 Terminado y con tests:
 
 - Esquema completo de las ocho tablas del dominio, con FKs indexadas y constraints en la base.
 - Modelos con asociaciones, validaciones de negocio y cálculo de subtotales y total.
+- Seeds idempotentes: 1 tienda, 2 proveedores, 3 productos por proveedor.
+- Catálogo de solo lectura en la raíz (`/`), agrupado por proveedor, con precio y stock.
+- Helper `format_money` para las vistas, con aritmética entera (sin floats).
 
 Pendiente:
 
-- Seeds, catálogo, carrito, checkout y tests de integración.
-- Helper de formateo de dinero para las vistas.
+- Carrito, checkout y sus tests de integración.
 
 ## Cómo correrlo
 
