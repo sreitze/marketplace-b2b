@@ -1,0 +1,7 @@
+orden_acme:
+  order: orden
+  supplier: acme
+
+orden_globex:
+  order: orden
+  supplier: globex

@@ -1,0 +1,5 @@
+carrito_tienda:
+  store: tienda
+
+carrito_vacio:
+  store: tienda

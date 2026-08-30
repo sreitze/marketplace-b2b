@@ -1,0 +1,17 @@
+teclado:
+  supplier: acme
+  name: Teclado mecánico
+  price_cents: 15000
+  stock: 10
+
+mouse:
+  supplier: acme
+  name: Mouse inalámbrico
+  price_cents: 8000
+  stock: 5
+
+monitor:
+  supplier: globex
+  name: Monitor 24 pulgadas
+  price_cents: 90000
+  stock: 3

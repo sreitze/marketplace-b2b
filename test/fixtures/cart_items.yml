@@ -1,0 +1,4 @@
+teclado_en_carrito:
+  cart: carrito_tienda
+  product: teclado
+  quantity: 2

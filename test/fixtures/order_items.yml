@@ -1,0 +1,17 @@
+teclado_comprado:
+  sub_order: orden_acme
+  product: teclado
+  quantity: 2
+  unit_price_cents: 15000
+
+mouse_comprado:
+  sub_order: orden_acme
+  product: mouse
+  quantity: 1
+  unit_price_cents: 8000
+
+monitor_comprado:
+  sub_order: orden_globex
+  product: monitor
+  quantity: 1
+  unit_price_cents: 90000
