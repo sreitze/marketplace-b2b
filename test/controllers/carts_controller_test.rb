@@ -10,6 +10,20 @@ class CartsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p", text: "El carrito está vacío."
   end
 
+  test "no muestra el botón Confirmar cuando el carrito está vacío" do
+    get cart_path
+
+    assert_select "form[action=?]", orders_path, count: 0
+  end
+
+  test "muestra el botón Confirmar cuando el carrito tiene items" do
+    post cart_items_path, params: { product_id: products(:teclado).id, quantity: 1 }
+
+    get cart_path
+
+    assert_select "form[action=?]", orders_path
+  end
+
   test "muestra los items del carrito con su total" do
     post cart_items_path, params: { product_id: products(:teclado).id, quantity: 2 }
     post cart_items_path, params: { product_id: products(:monitor).id, quantity: 1 }

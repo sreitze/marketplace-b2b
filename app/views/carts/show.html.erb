@@ -38,6 +38,8 @@
   </table>
 
   <p><strong>Total: <%= format_money(@cart_items.sum(&:subtotal_cents)) %></strong></p>
+
+  <p><%= button_to "Confirmar", orders_path, method: :post %></p>
 <% end %>
 
 <p><%= link_to "Volver al catálogo", root_path %></p>
