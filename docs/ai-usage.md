@@ -97,3 +97,28 @@ lectura en `/`, agrupado por proveedor, usando `includes(:products)` para evitar
 **Se verificó en vez de darlo por bueno:** que `db:seed` corrido dos veces seguidas no duplica
 filas (mismo `Store.count`, `Supplier.count` y `Product.count` antes y después), y que la página
 renderiza sin errores contra la base real (`bin/rails server` + `curl`).
+
+### Carrito de compras
+
+**Se pidió:** continuar con el carrito — agregar productos desde el catálogo, verlo, cambiar
+cantidad y quitar items. Se acordó en plan mode antes de tocar código, dejando el checkout
+explícitamente fuera de esta tarea.
+
+**Se aceptó:** `current_store`/`current_cart` en `ApplicationController`, `CartsController#show`,
+`CartItemsController` (`create`/`update`/`destroy`) con redirect clásico, y `Cart#add_product` para
+sumar cantidad en vez de duplicar el item.
+
+**Se verificó en vez de darlo por bueno, por no ser trivialmente comprobable a simple vista:**
+`Cart#add_product` asigna la cantidad cruda al item, valida, y recién si `errors[:quantity]` queda
+vacío arma la suma con el entero ya casteado. La duda era si sumar con `.to_i` a mano bastaba; no
+alcanza, porque `"1.5".to_i` da `1` y colaría una cantidad inválida redondeada. Confirmado en
+consola (`CartItem.new(quantity: "1.5").quantity` → `1`, pero `valid?` → `false`) y con tests que
+cubren cantidad 0, negativa y no entera tanto en alta nueva como sumando sobre un item existente.
+
+**Se encontró probando en el navegador (no en los tests), y se corrigió sin haberlo consultado
+antes:** el mensaje de error al rechazar una cantidad inválida salía en inglés ("Quantity must be
+an integer"), porque Rails usa `:en` por defecto y el proyecto nunca había tocado I18n — el resto de
+la UI está en español porque los textos están escritos directo en las vistas, no vía `t()`. Se fijó
+`config.i18n.default_locale = :es` y se agregó `config/locales/es.yml` con las traducciones que hoy
+se disparan. Es una traducción acotada a lo que se muestra ahora, no una capa de I18n completa para
+el resto del dominio.

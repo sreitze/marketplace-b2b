@@ -6,7 +6,7 @@ Una tienda arma un carrito con productos de varios proveedores. Al confirmar la 
 orden con **una suborden por proveedor**, y cada item queda con el precio congelado al momento de la
 compra.
 
-## Estado actual: catálogo listo, falta carrito y checkout
+## Estado actual: carrito listo, falta checkout
 
 Terminado y con tests:
 
@@ -15,10 +15,14 @@ Terminado y con tests:
 - Seeds idempotentes: 1 tienda, 2 proveedores, 3 productos por proveedor.
 - Catálogo de solo lectura en la raíz (`/`), agrupado por proveedor, con precio y stock.
 - Helper `format_money` para las vistas, con aritmética entera (sin floats).
+- Carrito: agregar producto desde el catálogo (suma cantidad si ya estaba), ver contenido con
+  subtotales y total, actualizar cantidad y quitar items. Flujo clásico con redirect, sin Hotwire.
+- `current_store` y `current_cart` en `ApplicationController`: la tienda única de los seeds y el
+  carrito persistido en DB con `cart_id` en sesión.
 
 Pendiente:
 
-- Carrito, checkout y sus tests de integración.
+- Checkout (crear `Order`/`SubOrder`/`OrderItem`) y sus tests de integración.
 
 ## Cómo correrlo
 
@@ -129,6 +133,20 @@ garantizan que la regla no se pueda violar ni con un bug que saltee el modelo.
 
 No hay login ni roles. `current_store` en `ApplicationController` devuelve la única tienda de los
 seeds, aislado en un solo método para que se vea dónde entraría la autenticación real.
+`current_cart` vive al lado: busca el carrito por `session[:cart_id]` y crea uno nuevo si no existe,
+sin exponer la sesión al resto de la app.
+
+### `Cart#add_product` valida antes de sumar, no suma y después valida
+
+Agregar un producto que ya está en el carrito debe sumar la cantidad, no duplicar el item (lo
+sostiene el único `(cart_id, product_id)`). La tentación es sumar con `quantity.to_i` y validar
+después, pero el cast a entero de Ruby es permisivo: `"1.5".to_i` da `1`, así que una cantidad
+inválida se colaría redondeada en vez de rechazarse.
+
+La validación `numericality only_integer` de Rails evita esto porque compara contra el valor *antes*
+del cast (`CartItem.new(quantity: "1.5").quantity` ya vale `1`, pero sigue siendo inválido). Por eso
+`add_product` asigna la cantidad cruda, valida, y solo si `errors[:quantity]` queda vacío arma la
+suma con el entero ya validado. Si es inválida, no se persiste nada y el item existente no se toca.
 
 ### Generación de la app sin componentes fuera de alcance
 
@@ -138,6 +156,15 @@ sus migraciones.
 
 Hotwire se evaluará sólo si simplifica algo concreto. Por ahora el flujo es formulario clásico con
 redirect.
+
+### Locale por defecto en español
+
+Probando el flujo de agregar al carrito con una cantidad inválida apareció el mensaje "Quantity
+must be an integer": Rails usa `:en` por defecto y ninguna vista lo pisaba, así que el único texto
+que salía en inglés era el de las validaciones (todo lo demás está escrito directo en español en
+las vistas, sin I18n). Se fijó `config.i18n.default_locale = :es` y se agregó
+`config/locales/es.yml` con las traducciones que hoy se muestran (mensajes de `CartItem#quantity` y
+`#product`). Al agregar validaciones nuevas que lleguen a la UI, hay que sumarlas ahí.
 
 ## Limitaciones conocidas
 
