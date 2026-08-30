@@ -32,12 +32,54 @@ bin/rubocop                    # lint
 
 ## Dominio: la orden se parte en subórdenes por proveedor
 
-```text
-Store ──< Cart ──< CartItem >── Product >── Supplier
-  │                                │
-  └──< Order ──< SubOrder ──< OrderItem
-                     │
-                     └── Supplier
+```mermaid
+erDiagram
+    Store ||--o{ Cart : "arma"
+    Store ||--o{ Order : "confirma"
+
+    Cart ||--o{ CartItem : "contiene"
+    CartItem }o--|| Product : "referencia"
+
+    Supplier ||--o{ Product : "provee"
+
+    Order ||--o{ SubOrder : "se parte en"
+    SubOrder }o--|| Supplier : "corresponde a"
+    SubOrder ||--o{ OrderItem : "agrupa"
+    OrderItem }o--|| Product : "referencia"
+
+    Store {
+        string name
+    }
+    Supplier {
+        string name
+    }
+    Product {
+        bigint supplier_id FK
+        string name
+        integer price_cents
+        integer stock
+    }
+    Cart {
+        bigint store_id FK
+    }
+    CartItem {
+        bigint cart_id FK
+        bigint product_id FK
+        integer quantity "precio vigente, delegado a Product"
+    }
+    Order {
+        bigint store_id FK
+    }
+    SubOrder {
+        bigint order_id FK
+        bigint supplier_id FK "unico por (order_id, supplier_id)"
+    }
+    OrderItem {
+        bigint sub_order_id FK
+        bigint product_id FK
+        integer quantity
+        integer unit_price_cents "congelado al confirmar"
+    }
 ```
 
 `SubOrder` expone su subtotal y `Order` su total general. Ambos se derivan de los items, que ya
