@@ -65,9 +65,15 @@ Reglas de negocio (van con validaciones **y** tests):
   de los seeds. Aislado en un solo método para que se vea que es un punto de extensión conocido.
 - **Lógica de checkout en un service object** (`app/services/orders/create_order.rb` o similar),
   no en el controller ni repartida en callbacks. El controller solo orquesta y decide qué renderizar.
-- **Stock:** se valida disponibilidad al confirmar la compra y se descuenta dentro de la misma
-  transacción. Sin reservas, sin locking optimista, sin manejo de concurrencia — eso se documenta
-  como limitación conocida en el README.
+- **Stock: se reserva al tocar el carrito, no al confirmar la compra.** Al crear o aumentar la
+  cantidad de un `CartItem` se descuenta stock de `product.stock`; al reducirla o destruir el item
+  se devuelve. Vive en callbacks `after_save`/`after_destroy` de `CartItem` (no en el controller ni
+  en `Cart#add_product`) porque el disparador es el ciclo de vida de esa fila sin importar el punto
+  de entrada. Sigue sin haber locking optimista ni manejo de concurrencia — la ventana de riesgo
+  ahora empieza en el carrito en vez del checkout, documentado como limitación conocida en el
+  README. La restauración de stock solo ocurre por una acción directa sobre `CartItem` (reducir
+  cantidad o destruirlo); no hay cancelación de orden ni limpieza de carritos abandonados que
+  también la disparen.
 
 ## Casos borde a cubrir
 

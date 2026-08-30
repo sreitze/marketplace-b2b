@@ -177,3 +177,38 @@ feedback temprano en el carrito.
 **Se verificó:** se agregaron dos tests (`rechaza una cantidad superior al stock del producto`,
 `permite una cantidad igual al stock del producto`) y corrió `bin/rails test` (47/47 verdes) y
 `bin/rubocop` (52 archivos, sin observaciones) antes de dar el cambio por bueno.
+
+### Reservar stock al tocar el carrito, no al confirmar la compra
+
+**Se pidió:** que agregar un `CartItem` (o aumentar su cantidad) descuente esa cantidad de
+`product.stock`, y que reducirla o quitar el item la devuelva.
+
+**Se marcó el conflicto antes de tocar código:** CLAUDE.md documentaba lo contrario como decisión
+tomada ("se valida y descuenta al confirmar la compra, sin reservas") en la sección "no
+re-litigar". Se preguntó explícitamente si avanzar igual, actualizando esa decisión, o mantenerla.
+
+**Se aceptó:** avanzar con la reserva en el carrito y actualizar CLAUDE.md/README para reflejar el
+cambio de decisión. También se confirmó que el único disparador de "devolver stock" es una acción
+directa sobre `CartItem` (reducir cantidad o destruirlo) — cancelación de orden y limpieza de
+carritos abandonados quedan fuera de alcance porque esos flujos no existen todavía.
+
+**Se implementó:** toda la lógica en `app/models/cart_item.rb` vía `after_save`/`after_destroy`
+(no en el controller ni en `Cart#add_product`), porque el disparador es el ciclo de vida de la fila
+`CartItem` sin importar el punto de entrada, y así es imposible olvidarlo en un futuro flujo que
+también guarde o destruya un item. El tope de la validación pasó de `product.stock` a
+`available_stock` (`product.stock + quantity_in_database`), para que un item no se cuente a sí
+mismo como excedente al editarse.
+
+**Se verificó en vez de darlo por bueno**, por ser una transacción implícita con varios call
+sites:
+
+- Se trazó a mano que `Cart#add_product` sigue funcionando sin tocarlo: su paso intermedio
+  (`item.quantity = delta; item.valid?`) no rompe el tope porque `available_stock` lee
+  `quantity_in_database`, no `item.quantity` en memoria.
+- Se ajustó `test/fixtures/products.yml` (`teclado.stock` de 10 a 8) para que quede consistente con
+  las 2 unidades que el fixture `teclado_en_carrito` ya "reserva" sin pasar por callbacks, y se
+  revisó que ningún test existente pidiera más de ese stock disponible dentro de un mismo flujo.
+- Se agregaron tests de reserva/devolución en `cart_item_test.rb`, `cart_test.rb`,
+  `cart_items_controller_test.rb` y uno en `product_test.rb` confirmando que actualizar el stock
+  directo (fuera del carrito) sigue funcionando sin interferencia. `bin/rails test` (62/62 verdes)
+  y `bin/rubocop` (52 archivos, sin observaciones) antes de dar el cambio por bueno.

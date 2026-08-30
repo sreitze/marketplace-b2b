@@ -170,16 +170,23 @@ las vistas, sin I18n). Se fijó `config.i18n.default_locale = :es` y se agregó
 
 Son decisiones tomadas a conciencia para acotar el MVP, no bugs pendientes.
 
-- **Sin manejo de concurrencia en stock.** La disponibilidad se valida y se descuenta dentro de la
-  transacción del checkout, sin reservas ni locking optimista. Dos compras simultáneas del mismo
-  producto pueden competir por el mismo stock. El `CHECK (stock >= 0)` evita que la base quede
-  inconsistente, pero el error le llega al segundo comprador recién al confirmar.
+- **Sin manejo de concurrencia en stock.** La reserva ocurre al tocar el carrito (crear o aumentar
+  un `CartItem` descuenta `product.stock`; reducirlo o destruirlo lo devuelve), sin locking
+  optimista. Dos carritos simultáneos pueden competir por el mismo stock: en vez del mensaje de
+  validación de siempre, una carrera real puede terminar en una excepción sin manejar al chocar
+  contra el `CHECK (stock >= 0)`, que sigue como red de seguridad para que la base nunca quede
+  inconsistente.
+- **La reserva de stock solo se libera por una acción directa sobre `CartItem`.** No hay
+  cancelación de orden ni limpieza de carritos abandonados que también la disparen (ver el punto
+  siguiente), así que un carrito armado y nunca tocado de nuevo deja ese stock reservado
+  indefinidamente.
 - **No se pueden borrar productos ni proveedores.** Es el supuesto elegido para el caso de un
   producto que desaparece mientras está en un carrito. Se implementa con
   `dependent: :restrict_with_error`, así que el intento falla con un error de validación.
 - **Carritos abandonados sin limpieza.** El carrito es una fila persistida y nada la borra si la
   tienda nunca confirma la compra. Es el costo aceptado de tener validaciones de ActiveRecord y
-  tests simples.
+  tests simples — y ahora también significa que el stock que ese carrito reservó queda retenido
+  fuera del catálogo mientras el carrito exista.
 - **Una sola tienda.** Viene de los seeds y no hay forma de crear otra desde la UI.
 
 ## Fuera de alcance
