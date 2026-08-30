@@ -1,0 +1,11 @@
+es:
+  activerecord:
+    errors:
+      messages:
+        not_an_integer: "debe ser un número entero"
+        greater_than: "debe ser mayor que %{count}"
+        taken: "ya está en uso"
+    attributes:
+      cart_item:
+        quantity: "Cantidad"
+        product: "Producto"
