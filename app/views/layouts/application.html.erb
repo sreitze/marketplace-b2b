@@ -24,6 +24,18 @@
   </head>
 
   <body>
+    <nav>
+      <%= link_to "Catálogo", root_path %>
+      | <%= link_to "Carrito (#{current_cart.cart_items.sum(:quantity)})", cart_path %>
+    </nav>
+
+    <% if notice %>
+      <p class="notice"><%= notice %></p>
+    <% end %>
+    <% if alert %>
+      <p class="alert"><%= alert %></p>
+    <% end %>
+
     <%= yield %>
   </body>
 </html>
