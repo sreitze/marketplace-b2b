@@ -19,7 +19,7 @@ class OrderTest < ActiveSupport::TestCase
     end
   end
 
-  test "el total suma los subtotales de todas las subórdenes" do
+  test "el total persiste la suma de los subtotales de todas las subórdenes" do
     assert_equal 128_000, orders(:orden).total_cents
   end
 

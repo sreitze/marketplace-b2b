@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_30_190911) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_30_232254) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -50,8 +50,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_30_190911) do
   create_table "orders", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "store_id", null: false
+    t.integer "total_cents", null: false
     t.datetime "updated_at", null: false
     t.index ["store_id"], name: "index_orders_on_store_id"
+    t.check_constraint "total_cents >= 0", name: "orders_total_cents_non_negative"
   end
 
   create_table "products", force: :cascade do |t|
@@ -75,11 +77,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_30_190911) do
   create_table "sub_orders", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "order_id", null: false
+    t.integer "subtotal_cents", null: false
     t.bigint "supplier_id", null: false
     t.datetime "updated_at", null: false
     t.index ["order_id", "supplier_id"], name: "index_sub_orders_on_order_id_and_supplier_id", unique: true
     t.index ["order_id"], name: "index_sub_orders_on_order_id"
     t.index ["supplier_id"], name: "index_sub_orders_on_supplier_id"
+    t.check_constraint "subtotal_cents >= 0", name: "sub_orders_subtotal_cents_non_negative"
   end
 
   create_table "suppliers", force: :cascade do |t|

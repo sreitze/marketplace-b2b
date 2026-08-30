@@ -1,7 +1,9 @@
 orden_acme:
   order: orden
   supplier: acme
+  subtotal_cents: 38000
 
 orden_globex:
   order: orden
   supplier: globex
+  subtotal_cents: 90000
