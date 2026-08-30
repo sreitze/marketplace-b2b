@@ -9,18 +9,100 @@
  * Consider organizing styles into separate files for maintainability.
  */
 
+:root {
+  --color-primary: #2563eb;
+  --color-text: #1f2937;
+  --color-border: #ddd;
+  --color-bg-muted: #f9fafb;
+  --color-notice-bg: #ecfdf3;
+  --color-notice-text: #166534;
+  --color-alert-bg: #fef2f2;
+  --color-alert-text: #991b1b;
+}
+
 body {
   font-family: sans-serif;
+  color: var(--color-text);
   margin: 2rem;
+  max-width: 960px;
+  margin-inline: auto;
+}
+
+h1, h2 {
+  color: var(--color-text);
+}
+
+nav {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  background: var(--color-bg-muted);
+  border-radius: 6px;
+}
+
+nav a {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+nav a:hover {
+  text-decoration: underline;
+}
+
+.notice, .alert {
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+.notice {
+  background: var(--color-notice-bg);
+  color: var(--color-notice-text);
+}
+
+.alert {
+  background: var(--color-alert-bg);
+  color: var(--color-alert-text);
+}
+
+.supplier-group {
+  margin-bottom: 2.5rem;
 }
 
 table {
   border-collapse: collapse;
   margin-bottom: 2rem;
+  width: 100%;
 }
 
 th, td {
-  padding: 0.4rem 1rem;
+  padding: 0.5rem 1rem;
   text-align: left;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--color-border);
+}
+
+th {
+  background: var(--color-bg-muted);
+}
+
+input[type="number"] {
+  padding: 0.3rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+input[type="submit"], button {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--color-primary);
+  border-radius: 4px;
+  background: var(--color-primary);
+  color: #fff;
+  cursor: pointer;
+}
+
+input[type="submit"]:hover, button:hover {
+  opacity: 0.9;
 }
