@@ -50,6 +50,21 @@ class CartItemTest < ActiveSupport::TestCase
     assert otro.valid?
   end
 
+  test "rechaza una cantidad superior al stock del producto" do
+    item = cart_items(:teclado_en_carrito)
+    item.quantity = item.product.stock + 1
+
+    assert_not item.valid?
+    assert_includes item.errors.attribute_names, :quantity
+  end
+
+  test "permite una cantidad igual al stock del producto" do
+    item = cart_items(:teclado_en_carrito)
+    item.quantity = item.product.stock
+
+    assert item.valid?
+  end
+
   test "usa el precio vigente del producto, no uno congelado" do
     item = cart_items(:teclado_en_carrito)
     assert_equal 30_000, item.subtotal_cents

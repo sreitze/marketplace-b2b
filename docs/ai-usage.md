@@ -153,3 +153,27 @@ ejecutaba. Se agregó `lang="es"` al layout y se cambió `step: 1`/`min: 1` por 
 (`bin/rails server`), llenando el campo cantidad con `1.5` y enviando el formulario, se confirmó que
 ya no aparece el tooltip nativo y que la página muestra el flash "Cantidad debe ser un número
 entero". Se corrió `bin/rails test` (45/45 verdes) antes de dar el cambio por bueno.
+
+### Validar que la cantidad del carrito no supere el stock
+
+**Se pidió:** agregar en `CartItem` una validación que rechace una cantidad mayor al stock del
+producto.
+
+**Se aceptó:** una segunda `validates :quantity, numericality: { less_than_or_equal_to: ... }`
+usando un lambda (`->(item) { item.product&.stock }`) porque el tope depende de cada registro, no es
+un número fijo, y `if: -> { product.present? }` para no duplicar el error "must exist" cuando falta
+el producto. Se agregó la traducción específica en
+`es.yml` (`activerecord.errors.models.cart_item.attributes.quantity.less_than_or_equal_to`) en vez
+de una clave genérica, porque "menor o igual que" sin contexto no deja claro que el límite es el
+stock.
+
+**No se tocó** `Cart#add_product` ni el service de checkout: esta validación solo cubre el alta o
+edición directa de un `CartItem` (p. ej. `CartItemsController#update`); sumar cantidades sobre un
+item existente ya pasa por `item.valid?` en `add_product`, así que el chequeo aplica igual ahí sin
+cambios adicionales. La validación de stock en el momento de confirmar la compra (regla ya definida
+en el service de checkout) sigue siendo la que previene condiciones de carrera; esta es solo
+feedback temprano en el carrito.
+
+**Se verificó:** se agregaron dos tests (`rechaza una cantidad superior al stock del producto`,
+`permite una cantidad igual al stock del producto`) y corrió `bin/rails test` (47/47 verdes) y
+`bin/rubocop` (52 archivos, sin observaciones) antes de dar el cambio por bueno.

@@ -3,6 +3,8 @@ class CartItem < ApplicationRecord
   belongs_to :product
 
   validates :quantity, numericality: { only_integer: true, greater_than: 0 }
+  validates :quantity, numericality: { less_than_or_equal_to: ->(item) { item.product&.stock } },
+                        if: -> { product.present? }
   validates :product_id, uniqueness: { scope: :cart_id }
 
   # Precio vigente, no congelado: el carrito refleja el catálogo hasta que se
