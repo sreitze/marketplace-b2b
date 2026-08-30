@@ -212,3 +212,33 @@ sites:
   `cart_items_controller_test.rb` y uno en `product_test.rb` confirmando que actualizar el stock
   directo (fuera del carrito) sigue funcionando sin interferencia. `bin/rails test` (62/62 verdes)
   y `bin/rubocop` (52 archivos, sin observaciones) antes de dar el cambio por bueno.
+
+### Checkout: confirmar el carrito y generar la orden
+
+**Se pidió:** que al presionar "Confirmar" en el carrito se cree una `Order` con una `SubOrder`
+por proveedor, y que se muestre el desglose de la orden final.
+
+**Se aceptó:** `Orders::CreateOrder` (service object, como indica CLAUDE.md) agrupando
+`cart_items` por `product.supplier`, con `raise`/transacción para atomicidad en vez de un objeto
+`Result` — CLAUDE.md pide explícitamente `raise` para forzar el rollback, y un `Result` sería una
+abstracción de más para un único call site. `OrdersController#create`/`#show` y la vista de
+desglose reusando el helper `format_money` ya existente.
+
+**Se verificó en vez de darlo por bueno**, por ser una transacción con varios call sites y un
+punto de la regla de negocio fácil de romper sin darse cuenta:
+
+- Que `cart.cart_items.delete_all` (en vez de `destroy_all`) efectivamente vacía el carrito sin
+  disparar `CartItem#release_stock` — test que confirma `product.stock` sin cambios después de
+  confirmar la compra, que es justo el escenario que un `destroy_all` rompería en silencio.
+- El caso de fallo a mitad de checkout resultó más difícil de lo esperado: las `CHECK` constraints
+  de la base hacen imposible construir un `CartItem` o `Product` inválido incluso bypasseando las
+  validaciones de ActiveRecord (`update_column` con cantidad 0 falla contra el constraint antes de
+  llegar al service). Se optó por parchear temporalmente `Product#price_cents` en el test para
+  forzar un `RecordInvalid` real a mitad de la transacción, restaurando el método original en un
+  `ensure`.
+
+**Se agregó sin haberlo consultado antes:** los tests del botón "Confirmar" en
+`carts_controller_test.rb` (aparece solo con carrito no vacío) y el test de 404 en
+`orders_controller_test.rb` para una orden inexistente, cubriendo el scoping por `current_store`.
+
+**Se corrió `bin/rails test` (73/73 verdes) y `bin/rubocop` antes de cada commit.**

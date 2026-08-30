@@ -6,7 +6,7 @@ Una tienda arma un carrito con productos de varios proveedores. Al confirmar la 
 orden con **una suborden por proveedor**, y cada item queda con el precio congelado al momento de la
 compra.
 
-## Estado actual: carrito listo, falta checkout
+## Estado actual: carrito y checkout listos
 
 Terminado y con tests:
 
@@ -19,10 +19,9 @@ Terminado y con tests:
   subtotales y total, actualizar cantidad y quitar items. Flujo clásico con redirect, sin Hotwire.
 - `current_store` y `current_cart` en `ApplicationController`: la tienda única de los seeds y el
   carrito persistido en DB con `cart_id` en sesión.
-
-Pendiente:
-
-- Checkout (crear `Order`/`SubOrder`/`OrderItem`) y sus tests de integración.
+- Checkout: botón "Confirmar" en el carrito, `Orders::CreateOrder` arma la `Order` con una
+  `SubOrder` por proveedor y sus `OrderItem` con precio congelado, y `OrdersController` muestra el
+  desglose de la orden confirmada.
 
 ## Cómo correrlo
 
@@ -148,6 +147,19 @@ del cast (`CartItem.new(quantity: "1.5").quantity` ya vale `1`, pero sigue siend
 `add_product` asigna la cantidad cruda, valida, y solo si `errors[:quantity]` queda vacío arma la
 suma con el entero ya validado. Si es inválida, no se persiste nada y el item existente no se toca.
 
+### Confirmar la compra vacía el carrito sin devolver el stock
+
+`Orders::CreateOrder` limpia el carrito con `cart.cart_items.delete_all` (DELETE directo por SQL)
+en vez de `destroy_all` o destruir cada item. `CartItem#after_destroy :release_stock` existe
+justamente para devolver al catálogo el stock de un item que se saca del carrito sin comprarlo; acá
+pasa lo contrario, ese stock ya reservado se está convirtiendo en un `OrderItem` real. Si se usara
+`destroy_all`, cada callback devolvería el stock que la orden recién creada necesita, dejando el
+producto con más stock del que en realidad tiene disponible. Por eso el service no vuelve a tocar
+`product.stock` en ningún punto: ya se reservó al tocar el carrito.
+
+Al vivir dentro de la misma transacción que la creación de la orden, un fallo a mitad de camino
+revierte ambas cosas: no queda orden parcial y el carrito tampoco se vacía.
+
 ### Generación de la app sin componentes fuera de alcance
 
 La app se generó sin Hotwire, Solid Cache/Queue/Cable, Docker, Kamal, Thruster ni CI de GitHub. El
@@ -188,6 +200,10 @@ Son decisiones tomadas a conciencia para acotar el MVP, no bugs pendientes.
   tests simples — y ahora también significa que el stock que ese carrito reservó queda retenido
   fuera del catálogo mientras el carrito exista.
 - **Una sola tienda.** Viene de los seeds y no hay forma de crear otra desde la UI.
+- **El checkout no vuelve a validar stock al confirmar.** La cantidad ya se validó (y reservó)
+  contra el stock disponible al tocar el carrito; agregar un segundo chequeo en
+  `Orders::CreateOrder` sería redundante en el camino feliz y no cierra el hueco real, que es la
+  falta de locking optimista ya documentada arriba.
 
 ## Fuera de alcance
 
