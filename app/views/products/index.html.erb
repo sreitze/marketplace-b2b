@@ -1,0 +1,37 @@
+<% content_for :title, "Catálogo" %>
+
+<h1>Catálogo</h1>
+
+<% if @suppliers.empty? %>
+  <p>Todavía no hay proveedores cargados.</p>
+<% else %>
+  <% @suppliers.each do |supplier| %>
+    <section class="supplier-group">
+      <h2><%= supplier.name %></h2>
+
+      <% products = supplier.products.sort_by(&:name) %>
+      <% if products.empty? %>
+        <p>Sin productos.</p>
+      <% else %>
+        <table>
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Precio</th>
+              <th>Stock</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% products.each do |product| %>
+              <tr>
+                <td><%= product.name %></td>
+                <td><%= format_money(product.price_cents) %></td>
+                <td><%= product.stock %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% end %>
+    </section>
+  <% end %>
+<% end %>
