@@ -122,3 +122,17 @@ la UI está en español porque los textos están escritos directo en las vistas,
 `config.i18n.default_locale = :es` y se agregó `config/locales/es.yml` con las traducciones que hoy
 se disparan. Es una traducción acotada a lo que se muestra ahora, no una capa de I18n completa para
 el resto del dominio.
+
+### Completar mensajes de validación en español
+
+**Se pidió:** traducir las validaciones de todos los modelos, sin dejar ningún mensaje en inglés.
+
+**Se aceptó:** completar `config/locales/es.yml` con las claves que faltaban (`blank`,
+`not_a_number`, `greater_than_or_equal_to`, `required` — esta última la usa Rails para el mensaje
+"must exist" de todo `belongs_to` obligatorio) y con las traducciones de atributos de los 8 modelos
+(`Nombre`, `Precio`, `Stock`, `Proveedor`, `Tienda`, `Cantidad`, etc.), para que el mensaje completo
+lea natural en vez de mostrar el nombre de columna en inglés.
+
+**Se verificó en vez de darlo por bueno:** se instanció cada modelo inválido por `rails runner`
+(incluyendo precio/stock negativo y cantidad decimal) para confirmar que ya no aparece
+"Translation missing" en ningún caso, y se corrió `bin/rails test` (45/45 verdes, sin tocar tests).
