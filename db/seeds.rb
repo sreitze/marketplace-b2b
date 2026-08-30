@@ -14,6 +14,21 @@ CATALOG = {
     { name: "Silla ergonómica", price_cents: 120_000, stock: 6 },
     { name: "Escritorio ajustable", price_cents: 250_000, stock: 2 },
     { name: "Lámpara de escritorio", price_cents: 12_000, stock: 30 }
+  ],
+  "Initech Oficina" => [
+    { name: "Resma de papel A4", price_cents: 4_500, stock: 50 },
+    { name: "Archivador colgante", price_cents: 9_000, stock: 18 },
+    { name: "Set de lapiceras", price_cents: 3_200, stock: 40 }
+  ],
+  "Umbrella Electrónica" => [
+    { name: "Webcam HD", price_cents: 35_000, stock: 12 },
+    { name: "Auriculares con micrófono", price_cents: 22_000, stock: 20 },
+    { name: "Hub USB-C", price_cents: 18_000, stock: 15 }
+  ],
+  "Wayne Suministros" => [
+    { name: "Impresora láser", price_cents: 310_000, stock: 3 },
+    { name: "Cartucho de tóner", price_cents: 45_000, stock: 22 },
+    { name: "Papel fotográfico", price_cents: 7_500, stock: 28 }
   ]
 }.freeze
 
