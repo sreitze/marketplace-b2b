@@ -35,4 +35,33 @@ class CartsControllerTest < ActionDispatch::IntegrationTest
     assert_select "td", text: products(:monitor).name
     assert_select "strong", text: "Total: #{format_money(2 * products(:teclado).price_cents + products(:monitor).price_cents)}"
   end
+
+  test "vaciar el carrito elimina todos los items y redirige al carrito" do
+    post cart_items_path, params: { product_id: products(:teclado).id, quantity: 2 }
+    post cart_items_path, params: { product_id: products(:monitor).id, quantity: 1 }
+    cart = Cart.find(session[:cart_id])
+
+    delete cart_path
+
+    assert_redirected_to cart_path
+    assert_equal 0, cart.cart_items.count
+  end
+
+  test "vaciar el carrito devuelve el stock reservado de cada item" do
+    post cart_items_path, params: { product_id: products(:teclado).id, quantity: 2 }
+    post cart_items_path, params: { product_id: products(:monitor).id, quantity: 1 }
+
+    delete cart_path
+
+    assert_equal 8, products(:teclado).reload.stock
+    assert_equal 3, products(:monitor).reload.stock
+  end
+
+  test "no crea orden ni suborden al vaciar el carrito" do
+    post cart_items_path, params: { product_id: products(:teclado).id, quantity: 1 }
+
+    assert_no_difference [ "Order.count", "SubOrder.count" ] do
+      delete cart_path
+    end
+  end
 end
