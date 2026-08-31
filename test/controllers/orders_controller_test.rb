@@ -43,4 +43,12 @@ class OrdersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :not_found
   end
+
+  test "lista las órdenes de la tienda con fecha y total" do
+    get orders_path
+
+    assert_response :success
+    assert_select "td", text: "##{orders(:orden).id}"
+    assert_select "td", text: format_money(orders(:orden).total_cents)
+  end
 end

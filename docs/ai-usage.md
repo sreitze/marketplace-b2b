@@ -291,3 +291,19 @@ reglas de negocio propias.
 verificaba el total general, sin cubrir el agrupamiento ni los subtotales por proveedor.
 
 **Se corrió `bin/rails test` (78/78 verdes) y `bin/rubocop` antes de commitear.**
+
+### Listado de órdenes
+
+**Se pidió:** una vista `index` para `Order`, accesible desde la nav bar, con la información
+mínima ya persistida en la base.
+
+**Se aceptó:** `OrdersController#index` con `current_store.orders.order(created_at: :desc)` y una
+tabla con id, fecha y `total_cents` por orden, sin tocar subórdenes ni items — las tres columnas ya
+viven directo en `orders`, así que no hace falta `includes` ni ningún join para evitar N+1. Link
+"Órdenes" agregado a la nav bar del layout, al lado de Catálogo y Carrito.
+
+**Se decidió sin haberlo consultado antes:** usar `strftime` en vez de `l(order.created_at, ...)`
+para la fecha. El proyecto no tiene formatos de fecha/hora traducidos en `es.yml` ni el gem
+`rails-i18n`, así que `l` hubiera dependido de un formato que no existe en el locale activo.
+
+**Se corrió `bin/rails test` (79/79 verdes) antes de commitear.**

@@ -12,7 +12,7 @@ Rails.application.routes.draw do
   resources :products, only: [ :index ]
   resource :cart, only: [ :show, :destroy ]
   resources :cart_items, only: [ :create, :update, :destroy ]
-  resources :orders, only: [ :create, :show ]
+  resources :orders, only: [ :index, :create, :show ]
 
   root "products#index"
 end

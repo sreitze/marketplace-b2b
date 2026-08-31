@@ -6,6 +6,10 @@ class OrdersController < ApplicationController
     redirect_to cart_path, alert: "El carrito está vacío."
   end
 
+  def index
+    @orders = current_store.orders.order(created_at: :desc)
+  end
+
   def show
     @order = current_store.orders
                            .includes(sub_orders: [ :supplier, { order_items: :product } ])

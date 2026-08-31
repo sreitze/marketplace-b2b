@@ -22,6 +22,9 @@ Terminado y con tests:
 - Checkout: botón "Confirmar" en el carrito, `Orders::CreateOrder` arma la `Order` con una
   `SubOrder` por proveedor y sus `OrderItem` con precio congelado, y `OrdersController` muestra el
   desglose de la orden confirmada.
+- Listado de órdenes en `/orders`, accesible desde la nav bar: fecha y total por orden, tomados
+  directo de las columnas `created_at` y `total_cents` (sin recorrer subórdenes ni items), con link
+  al detalle de cada una.
 
 ## Cómo correrlo
 

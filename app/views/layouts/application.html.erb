@@ -29,6 +29,7 @@
     <nav>
       <%= link_to "Catálogo", root_path %>
       | <%= link_to "Carrito (#{current_cart.cart_items.sum(:quantity)})", cart_path %>
+      | <%= link_to "Órdenes", orders_path %>
     </nav>
 
     <% if notice %>

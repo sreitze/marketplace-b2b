@@ -1,0 +1,32 @@
+<% content_for :title, "Órdenes" %>
+
+<h1>Órdenes</h1>
+
+<% if @orders.empty? %>
+  <p>Todavía no hay órdenes confirmadas.</p>
+<% else %>
+  <table>
+    <thead>
+      <tr>
+        <th>Orden</th>
+        <th>Fecha</th>
+        <th>Total</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @orders.each do |order| %>
+        <tr>
+          <td>#<%= order.id %></td>
+          <td><%= order.created_at.strftime("%d/%m/%Y %H:%M") %></td>
+          <td><%= format_money(order.total_cents) %></td>
+          <td>
+            <%= link_to order_path(order), title: "Ver detalle", aria: { label: "Ver detalle" } do %>
+              <span class="material-icons" aria-hidden="true">description</span>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
