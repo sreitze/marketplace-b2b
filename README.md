@@ -12,7 +12,8 @@ Terminado y con tests:
 
 - Esquema completo de las ocho tablas del dominio, con FKs indexadas y constraints en la base.
 - Modelos con asociaciones, validaciones de negocio y cálculo de subtotales y total.
-- Seeds idempotentes: 1 tienda, 2 proveedores, 3 productos por proveedor.
+- Seeds idempotentes: 1 tienda, 5 proveedores, 3 productos por proveedor, con precios y stock
+  distintos.
 - Catálogo de solo lectura en la raíz (`/`), agrupado por proveedor, con precio y stock.
 - Helper `format_money` para las vistas, con aritmética entera (sin floats).
 - Carrito: agregar producto desde el catálogo (suma cantidad si ya estaba), ver contenido con
@@ -220,6 +221,106 @@ Son decisiones tomadas a conciencia para acotar el MVP, no bugs pendientes.
   contra el stock disponible al tocar el carrito; agregar un segundo chequeo en
   `Orders::CreateOrder` sería redundante en el camino feliz y no cierra el hueco real, que es la
   falta de locking optimista ya documentada arriba.
+
+## Supuestos
+
+- **Una sola tienda, sin autenticación.** El enunciado ya lo fija así (`Store` única, creada en
+  seeds); `current_store` devuelve `Store.first` en vez de resolver un usuario logueado.
+- **No se pueden borrar productos ni proveedores.** Es el supuesto elegido para el caso "producto
+  eliminado o despublicado mientras está en el carrito": en vez de soft-delete o un estado
+  `discontinued`, se restringe el borrado con `dependent: :restrict_with_error`. Un producto que ya
+  fue vendido o está en algún carrito nunca desaparece por debajo de esas referencias.
+- **El carrito siempre refleja el precio y el stock vigentes del catálogo**, no un valor reservado.
+  El congelamiento de `unit_price_cents` es exclusivo de la compra confirmada (`OrderItem`); mientras
+  un producto está en el carrito, subir o bajar su precio en el catálogo se ve reflejado ahí también.
+- **El stock se reserva al tocar el carrito, no al confirmar la compra**, para evitar sobreventa
+  mientras el producto sigue "disponible" en el catálogo para otro carrito. El costo aceptado es que
+  ese stock queda retenido aunque la compra nunca se confirme (ver "Limitaciones conocidas").
+- **No hay control de concurrencia (sin locking optimista) sobre el stock.** Se asume un volumen de
+  uso bajo, compatible con una sola tienda operando sin usuarios simultáneos reales; por eso una
+  carrera entre dos requests tocando el mismo producto no está resuelta más allá del `CHECK (stock >=
+  0)` de la base como red de seguridad.
+
+## Casos borde cubiertos y dejados fuera
+
+**Cubiertos** (con test automatizado):
+
+- Orden con productos de 2 o más proveedores → una suborden por proveedor, con los items correctos.
+- Cambio de precio de un producto después de la compra → la orden histórica conserva el precio
+  congelado.
+- Fallo a mitad del checkout → no queda ninguna orden ni suborden parcial en la base (transacción
+  completa).
+- Cantidad 0, negativa o no entera al agregar o actualizar un item → rechazada con mensaje, tanto en
+  el modelo como en el flujo HTTP del carrito.
+- Carrito vacío → no se puede confirmar la compra (`EmptyCartError`, mensaje en el carrito).
+- Agregar dos veces el mismo producto al carrito → suma la cantidad sobre el item existente, no crea
+  un duplicado.
+- Cantidad que excede el stock disponible al agregar o aumentar un item del carrito → rechazada sin
+  descontar stock, incluyendo el caso de aumentar sobre un item que ya tenía parte de ese stock
+  reservado.
+- Producto eliminado mientras está en un carrito o en una orden → no aplica: no se puede borrar un
+  producto referenciado (ver "Supuestos").
+
+**Dejados fuera** (documentados como límite consciente del MVP, no como bug):
+
+- **Stock insuficiente en el momento exacto de confirmar el checkout.** No hay un chequeo ni un test
+  a ese nivel porque la cantidad ya se validó y reservó al tocar el carrito; el checkout confía en esa
+  reserva y no vuelve a tocar `product.stock`.
+- **Condiciones de carrera entre dos carritos compitiendo por el mismo stock.** Sin locking
+  optimista, una carrera real puede terminar en una excepción sin manejar en vez de un mensaje de
+  validación (ver "Limitaciones conocidas").
+- **Liberación de stock por abandono de carrito.** Un carrito armado y nunca confirmado ni tocado de
+  nuevo deja su stock reservado indefinidamente; no hay job ni proceso que lo libere.
+- **Multi-tienda y autenticación.** Fuera de alcance explícito del enunciado.
+- **Errores inesperados fuera del camino feliz del checkout** (por ejemplo, una excepción que no sea
+  `EmptyCartError`) no tienen un mensaje de UI dedicado y propagarían un error 500 real.
+
+## Qué cambiaría para producción
+
+- **Autenticación y multi-tienda reales.** Reemplazar `current_store = Store.first` por un login
+  que resuelva la tienda del usuario, y permitir crear más de una tienda.
+- **Locking sobre el stock.** Agregar `lock_version` (locking optimista) o `with_lock` en las
+  operaciones de `CartItem` para cerrar la condición de carrera ya documentada en "Limitaciones
+  conocidas", en vez de depender solo del `CHECK (stock >= 0)` como red de seguridad.
+- **Manejo de errores inesperados en el checkout.** Hoy `OrdersController` solo rescata
+  `EmptyCartError`; cualquier otra excepción (por ejemplo, la de una carrera de stock) da un 500
+  real. Sumaría una excepción de dominio específica para ese caso, con su propio mensaje, en vez de
+  dejar que se propague.
+- **Limpieza de carritos abandonados.** Un job periódico que libere el stock reservado y borre
+  carritos viejos sin confirmar, hoy inexistente.
+- **Observabilidad.** Logging estructurado y reporte de errores (Sentry/Honeybadger o similar) para
+  detectar en producción los casos hoy no manejados, en vez de depender de que un usuario reporte un
+  500.
+- **Revisar configuración de producción propia de Rails**: credenciales, backups de la base,
+  variables de entorno y HTTPS, que hoy no se ejercitaron porque el alcance es solo desarrollo/tests.
+
+## Próximos pasos
+
+- **Chequeo de stock explícito en el checkout**, con su propio mensaje de error y test dedicado, en
+  vez de confiar únicamente en la reserva hecha al tocar el carrito.
+- **Locking optimista o pesimista sobre `Product#stock`** para eliminar la condición de carrera
+  entre carritos simultáneos.
+- **Job de limpieza de carritos abandonados** que libere el stock reservado después de un tiempo de
+  inactividad.
+- **Tests de sistema/integración end-to-end** (por ejemplo con Capybara) que ejerciten el flujo
+  completo catálogo → carrito → checkout a través del navegador, complementando los tests de
+  modelo/servicio/controller actuales.
+- **Panel simple de administración** de productos y proveedores (alta, edición, baja controlada),
+  hoy fuera de alcance y sostenido solo por los seeds.
+- **Integración con una plataforma de pagos real**, hoy inexistente: la confirmación de la orden no
+  cobra nada, solo registra la compra.
+- **Contacto con el proveedor** una vez confirmada la orden (por ejemplo, notificarle su suborden),
+  hoy fuera de alcance: las subórdenes quedan registradas pero no se comunican a nadie.
+- **Recomendaciones debajo del carrito**, sugiriendo productos relacionados a los que ya están
+  agregados (por ejemplo, complementarios del mismo proveedor o comprados juntos con frecuencia).
+- **Proveedores con productos similares**, para que la tienda descubra alternativas de catálogo sin
+  salir del flujo de compra.
+- **Buscador de proveedores**, por nombre u otro criterio, hoy inexistente (solo se navegan
+  agrupados en el catálogo).
+- **Buscador de productos en el catálogo**, por nombre u otro criterio, para no depender de
+  desplazarse por todo el listado agrupado por proveedor.
+- **Sistema de reseñas para proveedores**, para que las tiendas dejen y consulten calificaciones y
+  comentarios antes de comprarles, hoy inexistente.
 
 ## Fuera de alcance
 
