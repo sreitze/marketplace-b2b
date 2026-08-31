@@ -18,6 +18,7 @@
   --color-notice-text: #166534;
   --color-alert-bg: #fef2f2;
   --color-alert-text: #991b1b;
+  --color-danger: #dc2626;
 }
 
 body {
@@ -112,4 +113,14 @@ input[type="submit"]:hover, button:hover {
 
 button .material-icons {
   font-size: 1.1rem;
+}
+
+.btn-danger {
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.cart-actions {
+  display: flex;
+  gap: 0.5rem;
 }

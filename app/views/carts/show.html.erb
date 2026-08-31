@@ -32,7 +32,7 @@
           </td>
           <td><%= format_money(item.subtotal_cents) %></td>
           <td>
-            <%= button_to cart_item_path(item), method: :delete, title: "Quitar", aria: { label: "Quitar" } do %>
+            <%= button_to cart_item_path(item), method: :delete, class: "btn-danger", title: "Quitar", aria: { label: "Quitar" } do %>
               <span class="material-icons" aria-hidden="true">delete</span>
             <% end %>
           </td>
@@ -43,10 +43,10 @@
 
   <p><strong>Total: <%= format_money(@cart_items.sum(&:subtotal_cents)) %></strong></p>
 
-  <p>
+  <div class="cart-actions">
     <%= button_to "Confirmar orden", orders_path, method: :post, onclick: "return confirm('¿Confirmar la compra?')" %>
-    <%= button_to "Vaciar carrito", cart_path, method: :delete, onclick: "return confirm('¿Vaciar el carrito?')" %>
-  </p>
+    <%= button_to "Vaciar carrito", cart_path, method: :delete, class: "btn-danger", onclick: "return confirm('¿Vaciar el carrito?')" %>
+  </div>
 <% end %>
 
 <p><%= link_to "Volver al catálogo", root_path %></p>
