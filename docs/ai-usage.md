@@ -307,3 +307,29 @@ para la fecha. El proyecto no tiene formatos de fecha/hora traducidos en `es.yml
 `rails-i18n`, así que `l` hubiera dependido de un formato que no existe en el locale activo.
 
 **Se corrió `bin/rails test` (79/79 verdes) antes de commitear.**
+
+### Corrección de tres imprecisiones del README
+
+**Se pidió:** revisar si la "Consecuencia" de la sección "El carrito es su propio modelo, no una
+orden en borrador" refleja la implementación real de `Cart` y `CartItem`, y corregir el README.
+
+**Se verificó contra el código antes de responder:** la afirmación central era correcta
+(`CartItem#unit_price_cents` delega en `product.price_cents`, `OrderItem#unit_price_cents` es
+columna congelada). Lo que no cerraba eran tres puntos alrededor.
+
+**Se aceptó:**
+
+1. "está comentada en ambos modelos" era más literal de lo que el código sostiene: en `CartItem` el
+   comentario está sobre `unit_price_cents`, pero en `OrderItem` está sobre `subtotal_cents` (por
+   qué no sumar leyendo `product.price_cents`). Se precisó dónde vive cada uno en vez de cambiar el
+   código para que la frase fuera cierta.
+2. La Consecuencia quedó incompleta después de la decisión de reservar stock al tocar el carrito:
+   `CartItem` también tiene efectos sobre `product.stock` vía callbacks que `OrderItem` no tiene.
+   Se sumó un párrafo, con remite a la sección que ya explica los callbacks en vez de repetirla.
+3. El supuesto "el carrito siempre refleja el precio **y el stock** vigentes del catálogo, no un
+   valor reservado" contradecía directamente al supuesto siguiente ("el stock se reserva al tocar el
+   carrito"). Era un resto anterior a esa decisión: el cuerpo del supuesto solo justificaba el
+   precio. Se acotó a precio, con remite explícito al supuesto del stock.
+
+**No se tocó código.** Se corrió `bin/rails test` y `bin/rubocop` igual antes de commitear, por la
+regla del repo.

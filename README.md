@@ -112,8 +112,14 @@ El efecto dominó era peor que la tabla extra: haría falta una columna de estad
 nullable en los items, y un filtro por estado en toda consulta de órdenes.
 
 **Consecuencia:** `CartItem#unit_price_cents` delega en `product.price_cents`, mientras
-`OrderItem#unit_price_cents` es una columna congelada. Es la asimetría central del dominio y está
-comentada en ambos modelos.
+`OrderItem#unit_price_cents` es una columna congelada. Es la asimetría central del dominio y ambos
+modelos la comentan: `CartItem` sobre `unit_price_cents` (por qué no se congela), `OrderItem` sobre
+`subtotal_cents` (por qué nunca se suma leyendo `product.price_cents`).
+
+La asimetría además dejó de ser solo de precio: `CartItem` reserva y devuelve stock en callbacks de
+su propio ciclo de vida (ver "Confirmar la compra vacía el carrito sin devolver el stock"), algo que
+`OrderItem` no hace. Con una `Order` en `draft`, esos callbacks habrían quedado colgados del ciclo
+de vida de la orden.
 
 ### Dinero en enteros y totales persistidos, no recalculados
 
@@ -230,9 +236,10 @@ Son decisiones tomadas a conciencia para acotar el MVP, no bugs pendientes.
   eliminado o despublicado mientras está en el carrito": en vez de soft-delete o un estado
   `discontinued`, se restringe el borrado con `dependent: :restrict_with_error`. Un producto que ya
   fue vendido o está en algún carrito nunca desaparece por debajo de esas referencias.
-- **El carrito siempre refleja el precio y el stock vigentes del catálogo**, no un valor reservado.
-  El congelamiento de `unit_price_cents` es exclusivo de la compra confirmada (`OrderItem`); mientras
-  un producto está en el carrito, subir o bajar su precio en el catálogo se ve reflejado ahí también.
+- **El carrito siempre refleja el precio vigente del catálogo**, no un precio reservado. El
+  congelamiento de `unit_price_cents` es exclusivo de la compra confirmada (`OrderItem`); mientras un
+  producto está en el carrito, subir o bajar su precio en el catálogo se ve reflejado ahí también. El
+  stock no sigue esta regla: se reserva al agregar el item (ver el supuesto siguiente).
 - **El stock se reserva al tocar el carrito, no al confirmar la compra**, para evitar sobreventa
   mientras el producto sigue "disponible" en el catálogo para otro carrito. El costo aceptado es que
   ese stock queda retenido aunque la compra nunca se confirme (ver "Limitaciones conocidas").
