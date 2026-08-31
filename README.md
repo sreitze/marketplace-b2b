@@ -74,10 +74,12 @@ erDiagram
     }
     Order {
         bigint store_id FK
+        integer total_cents "persistido, no recalculado"
     }
     SubOrder {
         bigint order_id FK
         bigint supplier_id FK "unico por (order_id, supplier_id)"
+        integer subtotal_cents "persistido, no recalculado"
     }
     OrderItem {
         bigint sub_order_id FK
