@@ -1,6 +1,7 @@
 class CartsController < ApplicationController
   def show
-    @cart_items = current_cart.cart_items.includes(product: :supplier).order(:id)
+    @cart_items_by_supplier = current_cart.cart_items.includes(product: :supplier).order(:id)
+      .group_by { |item| item.product.supplier }
   end
 
   def destroy

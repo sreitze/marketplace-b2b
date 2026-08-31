@@ -273,3 +273,21 @@ en vez de agregar la columna `NOT NULL` directo, para no asumir que las tablas e
 cualquier entorno donde se corra. Se corrió `bin/rails db:migrate` contra la base de dev (vacía, sin
 filas que backfillear) y `bin/rails test` (74/74 verdes) y `bin/rubocop` (7 archivos tocados, sin
 observaciones) antes de dar el cambio por bueno.
+
+### Agrupar el carrito por proveedor antes de confirmar la orden
+
+**Se pidió:** extender `carts/show.html.erb` para mostrar una tabla y subtotales por cada
+proveedor, agrupando los productos antes de generar la orden.
+
+**Se aceptó:** agrupar `current_cart.cart_items` por `product.supplier` en
+`CartsController#show` (mismo criterio que ya usa `Orders::CreateOrder` para armar las
+subórdenes) y renderizar una tabla por proveedor con su subtotal, más el total general al final.
+No se creó un service ni un helper nuevo: es una agrupación de solo lectura para la vista, sin
+reglas de negocio propias.
+
+**Se agregó sin haberlo consultado antes:** el test
+`"agrupa los items por proveedor y muestra el subtotal de cada uno"` en
+`carts_controller_test.rb`, porque el test existente usaba dos proveedores distintos pero solo
+verificaba el total general, sin cubrir el agrupamiento ni los subtotales por proveedor.
+
+**Se corrió `bin/rails test` (78/78 verdes) y `bin/rubocop` antes de commitear.**

@@ -36,6 +36,24 @@ class CartsControllerTest < ActionDispatch::IntegrationTest
     assert_select "strong", text: "Total: #{format_money(2 * products(:teclado).price_cents + products(:monitor).price_cents)}"
   end
 
+  test "agrupa los items por proveedor y muestra el subtotal de cada uno" do
+    post cart_items_path, params: { product_id: products(:teclado).id, quantity: 2 }
+    post cart_items_path, params: { product_id: products(:mouse).id, quantity: 1 }
+    post cart_items_path, params: { product_id: products(:monitor).id, quantity: 1 }
+
+    get cart_path
+
+    assert_response :success
+
+    acme_subtotal = 2 * products(:teclado).price_cents + products(:mouse).price_cents
+    globex_subtotal = products(:monitor).price_cents
+
+    assert_select "h2", text: suppliers(:acme).name
+    assert_select "h2", text: suppliers(:globex).name
+    assert_select "p", text: "Subtotal #{suppliers(:acme).name}: #{format_money(acme_subtotal)}"
+    assert_select "p", text: "Subtotal #{suppliers(:globex).name}: #{format_money(globex_subtotal)}"
+  end
+
   test "vaciar el carrito elimina todos los items y redirige al carrito" do
     post cart_items_path, params: { product_id: products(:teclado).id, quantity: 2 }
     post cart_items_path, params: { product_id: products(:monitor).id, quantity: 1 }
