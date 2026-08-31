@@ -4,4 +4,4 @@ acme:
 
 globex:
   name: Globex Tecnología
-  minimum_purchase_cents: 100000
+  minimum_purchase_cents: 90000

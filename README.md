@@ -151,6 +151,19 @@ garantizan que la regla no se pueda violar ni con un bug que saltee el modelo.
 | `CHECK (total_cents >= 0)` en `orders` | El total persistido nunca queda negativo |
 | `CHECK (subtotal_cents >= 0)` en `sub_orders` | El subtotal persistido nunca queda negativo |
 
+### El mínimo de compra se valida en `SubOrder`, no en el servicio
+
+La regla ("una suborden no puede quedar por debajo del mínimo de su proveedor") es una invariante
+de la fila, no un paso del checkout: vive como validación en `SubOrder` y así vale para cualquier
+punto de entrada, no solo para `Orders::CreateOrder`. No hay `CHECK` equivalente en la base porque
+la comparación cruza dos tablas.
+
+El costo fue reordenar `Orders::CreateOrder`: antes creaba la suborden con `subtotal_cents: 0` y la
+actualizaba después de insertar los items, un estado intermedio que ahora sería inválido para todo
+proveedor con mínimo mayor a cero. Pasó a construir la suborden y sus items en memoria, derivar el
+subtotal de `OrderItem#subtotal_cents` (precio ya congelado) y guardar todo con un único `save!`,
+dejando que el autosave del `has_many` persista los items. Misma transacción, mismo rollback total.
+
 ### Sin autenticación, con un punto de extensión explícito
 
 No hay login ni roles. `current_store` en `ApplicationController` devuelve la única tienda de los
@@ -223,10 +236,13 @@ Son decisiones tomadas a conciencia para acotar el MVP, no bugs pendientes.
   tests simples — y ahora también significa que el stock que ese carrito reservó queda retenido
   fuera del catálogo mientras el carrito exista.
 - **Una sola tienda.** Viene de los seeds y no hay forma de crear otra desde la UI.
-- **El mínimo de compra por proveedor se persiste pero no se aplica.** `Supplier#minimum_purchase_cents`
-  guarda el monto mínimo que declara cada proveedor, pero ningún flujo lo verifica todavía: el
-  checkout confirma la orden aunque el subtotal de una suborden quede por debajo del mínimo. Se
-  separó a propósito el cambio de esquema del cambio de comportamiento en `Orders::CreateOrder`.
+- **El mínimo de compra por proveedor se valida, pero sin mensaje en la UI.** `SubOrder` rechaza
+  una suborden cuyo `subtotal_cents` no llegue al `minimum_purchase_cents` de su proveedor, así
+  que el checkout ya no puede crear una orden por debajo del mínimo. Lo que falta es la mitad
+  visible: `OrdersController` no rescata ese `ActiveRecord::RecordInvalid`, con lo cual el intento
+  termina en un 500 en vez del flash comprensible que pide la regla de manejo de errores. El
+  carrito tampoco muestra el mínimo de cada proveedor ni cuánto falta. Es un corte de alcance
+  decidido a propósito: primero la regla de negocio con sus tests, después la UI.
 - **El checkout no vuelve a validar stock al confirmar.** La cantidad ya se validó (y reservó)
   contra el stock disponible al tocar el carrito; agregar un segundo chequeo en
   `Orders::CreateOrder` sería redundante en el camino feliz y no cierra el hueco real, que es la
@@ -271,6 +287,9 @@ Son decisiones tomadas a conciencia para acotar el MVP, no bugs pendientes.
   reservado.
 - Producto eliminado mientras está en un carrito o en una orden → no aplica: no se puede borrar un
   producto referenciado (ver "Supuestos").
+- Suborden por debajo del mínimo de compra de su proveedor → rechazada por validación, y el checkout
+  entero hace rollback (no queda orden ni suborden parcial). El subtotal exactamente igual al mínimo
+  se acepta.
 
 **Dejados fuera** (documentados como límite consciente del MVP, no como bug):
 
@@ -309,9 +328,9 @@ Son decisiones tomadas a conciencia para acotar el MVP, no bugs pendientes.
 
 - **Chequeo de stock explícito en el checkout**, con su propio mensaje de error y test dedicado, en
   vez de confiar únicamente en la reserva hecha al tocar el carrito.
-- **Hacer cumplir el mínimo de compra por proveedor en el checkout**: rechazar la confirmación
-  cuando el subtotal de alguna suborden no alcanza `Supplier#minimum_purchase_cents`, con mensaje
-  comprensible en el carrito y test del caso borde.
+- **Mostrar el mínimo de compra por proveedor en la UI**: rescatar el error de validación de
+  `SubOrder` en `OrdersController` para redirigir al carrito con un flash comprensible, y mostrar
+  en cada grupo por proveedor su mínimo y cuánto falta para alcanzarlo.
 - **Locking optimista o pesimista sobre `Product#stock`** para eliminar la condición de carrera
   entre carritos simultáneos.
 - **Job de limpieza de carritos abandonados** que libere el stock reservado después de un tiempo de

@@ -13,7 +13,7 @@ class CartItem < ApplicationRecord
   # Precio vigente, no congelado: el carrito refleja el catálogo hasta que se
   # confirma la compra. El congelado ocurre recién en OrderItem.
   def unit_price_cents
-    product.price_cents
+    product.price_cents * product.discount.percentage
   end
 
   def subtotal_cents

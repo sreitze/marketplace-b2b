@@ -56,13 +56,15 @@ class Orders::CreateOrderTest < ActiveSupport::TestCase
     # hacen imposible construir un CartItem o Product inválido incluso
     # bypasseando las validaciones de ActiveRecord. Para forzar un fallo real
     # a mitad del checkout hace falta parchear temporalmente price_cents.
+    # Se usa -1 (y no nil) para que la aritmética del subtotal siga funcionando
+    # y el fallo llegue como validación de OrderItem, no como TypeError.
     cart = carts(:carrito_tienda)
     cart.cart_items.create!(product: products(:monitor), quantity: 1)
     monitor_id = products(:monitor).id
     original_price_cents = Product.instance_method(:price_cents)
 
     Product.define_method(:price_cents) do
-      id == monitor_id ? nil : original_price_cents.bind(self).call
+      id == monitor_id ? -1 : original_price_cents.bind(self).call
     end
 
     assert_no_difference [ "Order.count", "SubOrder.count", "OrderItem.count" ] do
@@ -74,6 +76,26 @@ class Orders::CreateOrderTest < ActiveSupport::TestCase
     assert_equal 2, cart.reload.cart_items.count
   ensure
     Product.define_method(:price_cents, original_price_cents) if original_price_cents
+  end
+
+  test "un carrito que no alcanza el mínimo de un proveedor no crea nada" do
+    cart = carts(:carrito_tienda)
+    # El teclado es de acme (mínimo 0); el monitor de globex, cuyo mínimo es
+    # exactamente su precio: una unidad alcanza, pero subirle el mínimo no.
+    # Acme se agrupa primero, así que su suborden llega a insertarse antes de
+    # que falle la de globex: lo que se está probando es el rollback de esa
+    # suborden ya escrita, no que la transacción aborte antes de empezar.
+    cart.cart_items.create!(product: products(:monitor), quantity: 1)
+    suppliers(:globex).update!(minimum_purchase_cents: 90_001)
+
+    assert_no_difference [ "Order.count", "SubOrder.count", "OrderItem.count" ] do
+      assert_raises(ActiveRecord::RecordInvalid) do
+        Orders::CreateOrder.call(cart: cart)
+      end
+    end
+
+    assert_equal 2, cart.reload.cart_items.count
+    assert_empty SubOrder.where(supplier: suppliers(:acme)).where.not(order: orders(:orden))
   end
 
   test "vacía el carrito sin liberar el stock ya reservado" do

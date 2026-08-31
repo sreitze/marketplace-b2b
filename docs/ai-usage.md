@@ -367,3 +367,37 @@ corrido dos veces (5 proveedores / 15 productos, sin duplicados) y el `CHECK` pr
 
 **Pendiente anotado en el README:** la columna se persiste pero ningún flujo la aplica; hacer
 cumplir el mínimo en el checkout quedó en "Próximos pasos".
+
+## 2026-08-31 — Validación del mínimo de compra en `SubOrder`
+
+**Se pidió:** una validación en `app/models/sub_order.rb` que asegure que la suborden tenga un
+`subtotal_cents` igual o mayor al `minimum_purchase_cents` de su proveedor.
+
+**Se aceptó:** validación custom `subtotal_reaches_supplier_minimum` en `SubOrder`, con guards por
+`blank?` sobre `subtotal_cents` y `supplier` (una suborden a medio construir no dispara el error de
+mínimo, que sería confuso). Sin `CHECK` en la base: la comparación cruza dos tablas. Tests nuevos
+del caso por debajo del mínimo y del borde exacto (subtotal == mínimo → válida).
+
+**Se cambió respecto de lo obvio:** la validación sola rompía el checkout. `Orders::CreateOrder`
+creaba la suborden con `subtotal_cents: 0` y la actualizaba recién después de insertar los items,
+un estado intermedio inválido para cualquier proveedor con mínimo mayor a cero. Se reordenó el
+servicio para construir la suborden y sus `order_items` en memoria, derivar el subtotal de
+`OrderItem#subtotal_cents` y guardar todo con un único `save!` (autosave del `has_many`), sin
+duplicar la aritmética del precio ni cambiar la transacción.
+
+Dos ajustes de datos de test que se desprenden del cambio: el fixture `globex` bajó su mínimo de
+100.000 a 90.000 (su suborden fixture suma exactamente eso, así que los datos existentes quedan en
+el borde válido y ningún assert previo se movió); y el test de rollback a mitad del checkout, que
+parcheaba `price_cents` para devolver `nil`, ahora devuelve `-1` — con el subtotal calculándose
+antes del `save!`, `nil` explotaría con `TypeError` en vez del `RecordInvalid` que el test quiere
+ejercitar.
+
+**A revisar a mano:** el reordenamiento de `Orders::CreateOrder` es lo menos trivial del cambio
+(que el autosave corra dentro de la transacción y el rollback siga siendo total). Lo cubren los
+tests de `create_order_test.rb`, incluido uno nuevo de carrito por debajo del mínimo.
+
+**Verificación:** `bin/rails test` (87/87 verdes), `bin/rubocop` sin ofensas.
+
+**Pendiente anotado en el README:** decisión explícita del usuario de no tocar la UI en esta tanda.
+Hoy el checkout que no alcanza un mínimo termina en un `RecordInvalid` sin rescatar (500) en vez
+del flash comprensible; queda en "Limitaciones conocidas" y "Próximos pasos".

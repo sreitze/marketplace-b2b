@@ -15,18 +15,21 @@ module Orders
 
         order_total_cents = 0
         cart_items_by_supplier.each do |supplier, items|
-          sub_order = order.sub_orders.create!(supplier: supplier, subtotal_cents: 0)
-          subtotal_cents = 0
+          # Se arma entera en memoria y se guarda de una: la validación del
+          # mínimo de compra corre contra el subtotal final, no contra un cero
+          # intermedio. El autosave del has_many persiste los order_items.
+          sub_order = order.sub_orders.build(supplier: supplier)
           items.each do |cart_item|
-            order_item = sub_order.order_items.create!(
+            sub_order.order_items.build(
               product: cart_item.product,
               quantity: cart_item.quantity,
               unit_price_cents: cart_item.product.price_cents
             )
-            subtotal_cents += order_item.subtotal_cents
           end
-          sub_order.update!(subtotal_cents: subtotal_cents)
-          order_total_cents += subtotal_cents
+          sub_order.subtotal_cents = sub_order.order_items.sum(&:subtotal_cents)
+          sub_order.save!
+
+          order_total_cents += sub_order.subtotal_cents
         end
         order.update!(total_cents: order_total_cents)
 
