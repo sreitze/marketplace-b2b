@@ -1,5 +1,7 @@
 acme:
   name: Acme Insumos
+  minimum_purchase_cents: 0
 
 globex:
   name: Globex Tecnología
+  minimum_purchase_cents: 100000

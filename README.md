@@ -223,6 +223,10 @@ Son decisiones tomadas a conciencia para acotar el MVP, no bugs pendientes.
   tests simples — y ahora también significa que el stock que ese carrito reservó queda retenido
   fuera del catálogo mientras el carrito exista.
 - **Una sola tienda.** Viene de los seeds y no hay forma de crear otra desde la UI.
+- **El mínimo de compra por proveedor se persiste pero no se aplica.** `Supplier#minimum_purchase_cents`
+  guarda el monto mínimo que declara cada proveedor, pero ningún flujo lo verifica todavía: el
+  checkout confirma la orden aunque el subtotal de una suborden quede por debajo del mínimo. Se
+  separó a propósito el cambio de esquema del cambio de comportamiento en `Orders::CreateOrder`.
 - **El checkout no vuelve a validar stock al confirmar.** La cantidad ya se validó (y reservó)
   contra el stock disponible al tocar el carrito; agregar un segundo chequeo en
   `Orders::CreateOrder` sería redundante en el camino feliz y no cierra el hueco real, que es la
@@ -305,6 +309,9 @@ Son decisiones tomadas a conciencia para acotar el MVP, no bugs pendientes.
 
 - **Chequeo de stock explícito en el checkout**, con su propio mensaje de error y test dedicado, en
   vez de confiar únicamente en la reserva hecha al tocar el carrito.
+- **Hacer cumplir el mínimo de compra por proveedor en el checkout**: rechazar la confirmación
+  cuando el subtotal de alguna suborden no alcanza `Supplier#minimum_purchase_cents`, con mensaje
+  comprensible en el carrito y test del caso borde.
 - **Locking optimista o pesimista sobre `Product#stock`** para eliminar la condición de carrera
   entre carritos simultáneos.
 - **Job de limpieza de carritos abandonados** que libere el stock reservado después de un tiempo de

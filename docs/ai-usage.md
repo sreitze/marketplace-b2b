@@ -333,3 +333,37 @@ columna congelada). Lo que no cerraba eran tres puntos alrededor.
 
 **No se tocó código.** Se corrió `bin/rails test` y `bin/rubocop` igual antes de commitear, por la
 regla del repo.
+
+### Columna `minimum_purchase_cents` en `suppliers` (2026-08-31)
+
+**Se pidió:** crear una columna `minimo_compra` en la tabla `suppliers` y generar la migración.
+
+**Se preguntó antes de escribir código,** porque tres cosas cambiaban materialmente el trabajo:
+
+1. Si "mínimo de compra" era un monto o una cantidad de unidades. El usuario confirmó que es un
+   **monto**, así que va como entero en centavos, coherente con `price_cents` / `total_cents` /
+   `subtotal_cents`.
+2. Si la columna debía aplicarse ya en el checkout o solo persistirse. El usuario eligió **solo la
+   columna**, para no mezclar el cambio de esquema con un cambio de comportamiento en
+   `Orders::CreateOrder`.
+3. El nombre: CLAUDE.md pide nombres de dominio en inglés, y `minimo_compra` hubiera quedado como
+   la única columna en español del esquema. El usuario aceptó **`minimum_purchase_cents`**.
+
+**Se aceptó:** migración con `null: false, default: 0` (0 = "sin mínimo", evita backfill y evita un
+`NULL` que haya que chequear en cada lectura) más `CHECK (minimum_purchase_cents >= 0)`, siguiendo
+el patrón de `products_price_cents_non_negative`. Validación `numericality` en el modelo,
+`test/models/supplier_test.rb` nuevo, fixtures con dos valores distintos y seeds con un mínimo
+distinto por proveedor.
+
+**Se cambió respecto de lo obvio:** `db/seeds.rb` usaba `Supplier.find_or_create_by!(name:)` a
+secas. Con un atributo nuevo eso deja de ser idempotente en el sentido útil — una segunda corrida
+no actualizaría el mínimo si cambia en el archivo. Se reestructuró `CATALOG` a
+`nombre => { minimum_purchase_cents:, products: }` y se agregó un `update!` explícito, igual a lo
+que ya se hacía con los productos.
+
+**Verificación:** `bin/rails test` (84/84 verdes), `bin/rubocop` sin ofensas, `bin/rails db:seed`
+corrido dos veces (5 proveedores / 15 productos, sin duplicados) y el `CHECK` probado con
+`bin/rails runner` + `update_column(-1)`, que falla con `PG::CheckViolation` como corresponde.
+
+**Pendiente anotado en el README:** la columna se persiste pero ningún flujo la aplica; hacer
+cumplir el mínimo en el checkout quedó en "Próximos pasos".
